@@ -2,6 +2,7 @@ README.md
 pyproject.toml
 app/__init__.py
 app/main.py
+app/onlyoffice.py
 files.egg-info/PKG-INFO
 files.egg-info/SOURCES.txt
 files.egg-info/dependency_links.txt
@@ -11,5 +12,7 @@ tests/test_files.py
 tests/test_health.py
 tests/test_leases.py
 tests/test_managed_assets.py
+tests/test_onlyoffice.py
+tests/test_persistence.py
 tests/test_preview_sessions.py
 tests/test_uploads.py
