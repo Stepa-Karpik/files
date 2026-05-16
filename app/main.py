@@ -35,6 +35,13 @@ def register_external(payload: ExternalAssetCreate):
     assets[asset_id] = asset
     return asset
 
+@app.post('/api/v1/assets/managed', status_code=status.HTTP_201_CREATED)
+def register_managed(payload: ManagedAssetCreate):
+    asset_id = f'asset_{uuid4().hex}'
+    asset = {'asset_id': asset_id, 'storage_mode': 'managed', **payload.model_dump()}
+    assets[asset_id] = asset
+    return asset
+
 @app.post('/api/v1/leases', status_code=status.HTTP_201_CREATED)
 def create_lease(payload: LeaseCreate):
     lease_id = f'lease_{uuid4().hex}'
