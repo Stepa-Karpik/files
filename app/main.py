@@ -1,11 +1,13 @@
 from uuid import uuid4
-from fastapi import FastAPI, status
+from pathlib import Path
+from fastapi import FastAPI, File, Form, UploadFile, status
 from pydantic import BaseModel
 
 app = FastAPI(title="files")
 assets: dict[str, dict] = {}
 leases: dict[str, dict] = {}
 previews: dict[str, dict] = {}
+UPLOAD_DIR = Path("storage/managed")
 
 class ExternalAssetCreate(BaseModel):
     owner_subject_id: str
@@ -61,3 +63,21 @@ def create_preview(payload: PreviewCreate):
     preview = {'preview_id': preview_id, 'asset_id': payload.asset_id, 'filename': payload.filename, 'engine': 'onlyoffice', 'status': 'queued'}
     previews[preview_id] = preview
     return preview
+
+
+@app.post('/api/v1/uploads/managed', status_code=status.HTTP_201_CREATED)
+async def upload_managed(owner_subject_id: str = Form(...), file: UploadFile = File(...)):
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    asset_id = f'asset_{uuid4().hex}'
+    target = UPLOAD_DIR / asset_id
+    target.write_bytes(await file.read())
+    asset = {
+        'asset_id': asset_id,
+        'storage_mode': 'managed',
+        'owner_subject_id': owner_subject_id,
+        'filename': file.filename or asset_id,
+        'content_type': file.content_type or 'application/octet-stream',
+        'path': str(target),
+    }
+    assets[asset_id] = asset
+    return asset

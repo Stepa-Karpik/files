@@ -7,4 +7,9 @@ files.egg-info/SOURCES.txt
 files.egg-info/dependency_links.txt
 files.egg-info/requires.txt
 files.egg-info/top_level.txt
+tests/test_files.py
 tests/test_health.py
+tests/test_leases.py
+tests/test_managed_assets.py
+tests/test_preview_sessions.py
+tests/test_uploads.py
