@@ -5,6 +5,7 @@ from pydantic import BaseModel
 app = FastAPI(title="files")
 assets: dict[str, dict] = {}
 leases: dict[str, dict] = {}
+previews: dict[str, dict] = {}
 
 class ExternalAssetCreate(BaseModel):
     owner_subject_id: str
@@ -14,6 +15,10 @@ class ExternalAssetCreate(BaseModel):
 
 class LeaseCreate(BaseModel):
     asset_id: str
+
+class PreviewCreate(BaseModel):
+    asset_id: str
+    filename: str
 
 @app.get('/healthz')
 def healthz(): return {'status': 'ok', 'service': 'files'}
@@ -37,3 +42,10 @@ def close_lease(lease_id: str):
     lease = leases[lease_id]
     lease['status'] = 'closing'
     return lease
+
+@app.post('/api/v1/previews', status_code=status.HTTP_201_CREATED)
+def create_preview(payload: PreviewCreate):
+    preview_id = f'preview_{uuid4().hex}'
+    preview = {'preview_id': preview_id, 'asset_id': payload.asset_id, 'filename': payload.filename, 'engine': 'onlyoffice', 'status': 'queued'}
+    previews[preview_id] = preview
+    return preview
