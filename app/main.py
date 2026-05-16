@@ -13,6 +13,11 @@ class ExternalAssetCreate(BaseModel):
     external_file_id: str
     revision: str
 
+class ManagedAssetCreate(BaseModel):
+    owner_subject_id: str
+    filename: str
+    content_type: str
+
 class LeaseCreate(BaseModel):
     asset_id: str
 
