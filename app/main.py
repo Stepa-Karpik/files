@@ -57,7 +57,8 @@ def get_preview_editor_config(preview_id:str,session:SessionDep):
     preview=FileRepository(session).get_preview(preview_id)
     if preview is None: raise HTTPException(status_code=404,detail='preview not found')
     public_base=os.getenv('FILES_PUBLIC_BASE_URL','http://localhost:8320').rstrip('/')
-    return build_editor_config(file_id=preview.asset_id,filename=preview.filename,download_url=f'{public_base}/api/v1/assets/{preview.asset_id}/content')
+    public_api_prefix = '/v1' if public_base.endswith('/files-api') else '/api/v1'
+    return build_editor_config(file_id=preview.asset_id,filename=preview.filename,download_url=f'{public_base}{public_api_prefix}/assets/{preview.asset_id}/content')
 @app.get('/api/v1/assets/{asset_id}/content')
 def get_asset_content(asset_id:str,session:SessionDep):
     asset=FileRepository(session).get_asset(asset_id)
