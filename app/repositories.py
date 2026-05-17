@@ -14,3 +14,4 @@ class FileRepository:
         lease = self.session.get(LeaseModel, lease_id); assert lease is not None; lease.status='closing'; self.session.commit(); self.session.refresh(lease); return lease
     def create_preview(self, *, asset_id: str, filename: str) -> PreviewModel:
         preview = PreviewModel(asset_id=asset_id, filename=filename); self.session.add(preview); self.session.commit(); self.session.refresh(preview); return preview
+    def get_preview(self, preview_id: str) -> PreviewModel | None: return self.session.get(PreviewModel, preview_id)

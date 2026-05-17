@@ -1,10 +1,13 @@
+import os
 from pathlib import Path
 from typing import Annotated
-from fastapi import Depends, FastAPI, File, Form, UploadFile, status
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.db import get_session
 from app.repositories import FileRepository
+from app.onlyoffice import build_editor_config
 
 app=FastAPI(title='files')
 UPLOAD_DIR=Path('storage/managed')
@@ -25,6 +28,17 @@ def create_lease(payload:LeaseCreate,session:SessionDep): return _lease(FileRepo
 def close_lease(lease_id:str,session:SessionDep): return _lease(FileRepository(session).close_lease(lease_id))
 @app.post('/api/v1/previews',status_code=status.HTTP_201_CREATED)
 def create_preview(payload:PreviewCreate,session:SessionDep): return _preview(FileRepository(session).create_preview(**payload.model_dump()))
+@app.get('/api/v1/previews/{preview_id}/editor-config')
+def get_preview_editor_config(preview_id:str,session:SessionDep):
+    preview=FileRepository(session).get_preview(preview_id)
+    if preview is None: raise HTTPException(status_code=404,detail='preview not found')
+    public_base=os.getenv('FILES_PUBLIC_BASE_URL','http://localhost:8320').rstrip('/')
+    return build_editor_config(file_id=preview.asset_id,filename=preview.filename,download_url=f'{public_base}/api/v1/assets/{preview.asset_id}/content')
+@app.get('/api/v1/assets/{asset_id}/content')
+def get_asset_content(asset_id:str,session:SessionDep):
+    asset=FileRepository(session).get_asset(asset_id)
+    if asset is None or asset.path is None: raise HTTPException(status_code=404,detail='asset content not available')
+    return FileResponse(asset.path,media_type=asset.content_type or 'application/octet-stream',filename=asset.filename)
 @app.post('/api/v1/uploads/managed',status_code=status.HTTP_201_CREATED)
 async def upload_managed(session:SessionDep,owner_subject_id:str=Form(...),file:UploadFile=File(...)):
     UPLOAD_DIR.mkdir(parents=True,exist_ok=True)
