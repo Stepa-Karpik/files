@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from typing import Annotated
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -10,6 +11,13 @@ from app.repositories import FileRepository
 from app.onlyoffice import build_editor_config
 
 app=FastAPI(title='files')
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[origin for origin in os.getenv('FRONTEND_ORIGINS', 'http://localhost:3200').split(',') if origin],
+    allow_credentials=True,
+    allow_methods=['*'],
+    allow_headers=['*'],
+)
 UPLOAD_DIR=Path('storage/managed')
 SessionDep=Annotated[Session,Depends(get_session)]
 class ExternalAssetCreate(BaseModel): owner_subject_id:str; provider:str; external_file_id:str; revision:str
