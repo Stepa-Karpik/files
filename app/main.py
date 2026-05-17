@@ -36,8 +36,22 @@ def register_managed(payload:ManagedAssetCreate,session:SessionDep): return _ass
 def create_lease(payload:LeaseCreate,session:SessionDep): return _lease(FileRepository(session).create_lease(asset_id=payload.asset_id))
 @app.post('/api/v1/leases/{lease_id}/close')
 def close_lease(lease_id:str,session:SessionDep): return _lease(FileRepository(session).close_lease(lease_id))
+@app.post('/api/v1/leases/{lease_id}/heartbeat')
+def heartbeat_lease(lease_id:str,session:SessionDep): return _lease(FileRepository(session).heartbeat_lease(lease_id))
+@app.post('/api/v1/leases/cleanup')
+def cleanup_leases(session:SessionDep): return {'deleted': FileRepository(session).cleanup_leases()}
 @app.post('/api/v1/previews',status_code=status.HTTP_201_CREATED)
 def create_preview(payload:PreviewCreate,session:SessionDep): return _preview(FileRepository(session).create_preview(**payload.model_dump()))
+@app.post('/api/v1/previews/{preview_id}/heartbeat')
+def heartbeat_preview(preview_id:str,session:SessionDep):
+    preview=FileRepository(session).get_preview(preview_id)
+    if preview is None or preview.lease_id is None: raise HTTPException(status_code=404,detail='preview not found')
+    return _lease(FileRepository(session).heartbeat_lease(preview.lease_id))
+@app.post('/api/v1/previews/{preview_id}/close')
+def close_preview(preview_id:str,session:SessionDep):
+    preview=FileRepository(session).get_preview(preview_id)
+    if preview is None or preview.lease_id is None: raise HTTPException(status_code=404,detail='preview not found')
+    return _lease(FileRepository(session).close_lease(preview.lease_id))
 @app.get('/api/v1/previews/{preview_id}/editor-config')
 def get_preview_editor_config(preview_id:str,session:SessionDep):
     preview=FileRepository(session).get_preview(preview_id)
@@ -70,4 +84,4 @@ def _asset(asset): return {'asset_id':asset.id,'storage_mode':asset.storage_mode
 def _build_integrations_client() -> HttpIntegrationsClient:
     return HttpIntegrationsClient(base_url=os.getenv('INTEGRATIONS_BASE_URL', 'http://integrations:8310'))
 def _lease(lease): return {'lease_id':lease.id,'asset_id':lease.asset_id,'status':lease.status}
-def _preview(preview): return {'preview_id':preview.id,'asset_id':preview.asset_id,'filename':preview.filename,'engine':preview.engine,'status':preview.status}
+def _preview(preview): return {'preview_id':preview.id,'asset_id':preview.asset_id,'lease_id':preview.lease_id,'filename':preview.filename,'engine':preview.engine,'status':preview.status}

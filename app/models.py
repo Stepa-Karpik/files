@@ -23,10 +23,14 @@ class LeaseModel(Base):
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: f'lease_{uuid4().hex}')
     asset_id: Mapped[str] = mapped_column(String(64), index=True)
     status: Mapped[str] = mapped_column(String(32), default='active')
+    last_heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=True)
+    close_after: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 class PreviewModel(Base):
     __tablename__ = 'previews'
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: f'preview_{uuid4().hex}')
     asset_id: Mapped[str] = mapped_column(String(64), index=True)
+    lease_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     filename: Mapped[str] = mapped_column(String(512))
     engine: Mapped[str] = mapped_column(String(64), default='onlyoffice')
     status: Mapped[str] = mapped_column(String(32), default='queued')
