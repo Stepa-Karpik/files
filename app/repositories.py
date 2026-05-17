@@ -8,6 +8,8 @@ class FileRepository:
     def create_managed_asset(self, **payload) -> AssetModel:
         asset = AssetModel(storage_mode='managed', **payload); self.session.add(asset); self.session.commit(); self.session.refresh(asset); return asset
     def get_asset(self, asset_id: str) -> AssetModel | None: return self.session.get(AssetModel, asset_id)
+    def set_asset_path(self, asset_id: str, *, path: str) -> AssetModel:
+        asset=self.get_asset(asset_id); assert asset is not None; asset.path=path; self.session.commit(); self.session.refresh(asset); return asset
     def create_lease(self, *, asset_id: str) -> LeaseModel:
         lease = LeaseModel(asset_id=asset_id); self.session.add(lease); self.session.commit(); self.session.refresh(lease); return lease
     def close_lease(self, lease_id: str) -> LeaseModel:
