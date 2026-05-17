@@ -13,3 +13,11 @@ services:
     env_file: [.env]
     depends_on: [migrator]
     ports: ["127.0.0.1:8320:8320"]
+    networks:
+      default:
+      ecosystem:
+        aliases: [files]
+
+networks:
+  ecosystem:
+    external: true
