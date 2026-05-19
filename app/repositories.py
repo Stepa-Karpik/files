@@ -31,7 +31,7 @@ class FileRepository:
             close_after = _as_utc(lease.close_after)
             if close_after and close_after <= now:
                 asset = self.get_asset(lease.asset_id)
-                if asset and asset.path:
+                if asset and asset.path and asset.storage_mode == 'external':
                     path = Path(asset.path)
                     if path.exists():
                         path.unlink()
