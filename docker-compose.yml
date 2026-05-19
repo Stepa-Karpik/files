@@ -22,6 +22,8 @@ services:
       migrator:
         condition: service_completed_successfully
     ports: ["127.0.0.1:8320:8320"]
+    volumes:
+      - files_storage:/app/storage
     networks:
       default:
       ecosystem:
@@ -33,6 +35,11 @@ services:
       migrator:
         condition: service_completed_successfully
     command: ["python", "-m", "app.worker"]
+    volumes:
+      - files_storage:/app/storage
+
+volumes:
+  files_storage:
 
 networks:
   ecosystem:
