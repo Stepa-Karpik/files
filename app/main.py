@@ -1,7 +1,9 @@
 import os
 from pathlib import Path
+from uuid import uuid4
 from typing import Annotated
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
+import httpx
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -67,20 +69,24 @@ def get_asset_content(asset_id:str,session:SessionDep):
         if asset.external_path is None: raise HTTPException(status_code=404,detail='asset content not available')
         TEMP_DIR.mkdir(parents=True, exist_ok=True)
         target=TEMP_DIR/f"{asset.id}-{asset.filename or 'external'}"
-        target.write_bytes(_build_integrations_client().download_external_content(
-            owner_subject_id=asset.owner_subject_id,
-            provider=asset.provider or '',
-            external_path=asset.external_path,
-        ))
+        try:
+            target.write_bytes(_build_integrations_client().download_external_content(
+                owner_subject_id=asset.owner_subject_id,
+                provider=asset.provider or '',
+                external_path=asset.external_path,
+            ))
+        except httpx.HTTPStatusError as exc:
+            raise HTTPException(status_code=exc.response.status_code, detail='external file content is not available') from exc
         asset=FileRepository(session).set_asset_path(asset.id, path=str(target))
     if asset.path is None: raise HTTPException(status_code=404,detail='asset content not available')
     return FileResponse(asset.path,media_type=asset.content_type or 'application/octet-stream',filename=asset.filename)
 @app.post('/api/v1/uploads/managed',status_code=status.HTTP_201_CREATED)
 async def upload_managed(session:SessionDep,owner_subject_id:str=Form(...),file:UploadFile=File(...)):
     UPLOAD_DIR.mkdir(parents=True,exist_ok=True)
-    target=UPLOAD_DIR/(file.filename or 'upload')
+    safe_name=file.filename or 'upload'
+    target=UPLOAD_DIR/f"{uuid4().hex}-{safe_name}"
     target.write_bytes(await file.read())
-    return _asset(FileRepository(session).create_managed_asset(owner_subject_id=owner_subject_id,filename=file.filename or target.name,content_type=file.content_type or 'application/octet-stream',path=str(target)))
+    return _asset(FileRepository(session).create_managed_asset(owner_subject_id=owner_subject_id,filename=safe_name,content_type=file.content_type or 'application/octet-stream',path=str(target)))
 def _asset(asset): return {'asset_id':asset.id,'storage_mode':asset.storage_mode,'owner_subject_id':asset.owner_subject_id,'filename':asset.filename,'content_type':asset.content_type,'provider':asset.provider,'external_file_id':asset.external_file_id,'revision':asset.revision,'path':asset.path}
 def _build_integrations_client() -> HttpIntegrationsClient:
     return HttpIntegrationsClient(base_url=os.getenv('INTEGRATIONS_BASE_URL', 'http://integrations:8310'))
