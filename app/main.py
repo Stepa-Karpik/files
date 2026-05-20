@@ -63,6 +63,15 @@ def get_preview_editor_config(preview_id:str,session:SessionDep):
     return build_editor_config(file_id=preview.asset_id,filename=preview.filename,download_url=f'{public_base}{public_api_prefix}/assets/{preview.asset_id}/content')
 @app.get('/api/v1/assets/{asset_id}/content')
 def get_asset_content(asset_id:str,session:SessionDep):
+    asset=_materialize_asset(asset_id, session)
+    return FileResponse(asset.path, media_type=asset.content_type or 'application/octet-stream', filename=asset.filename, content_disposition_type='inline')
+
+@app.get('/api/v1/assets/{asset_id}/download')
+def download_asset_content(asset_id:str,session:SessionDep):
+    asset=_materialize_asset(asset_id, session)
+    return FileResponse(asset.path, media_type=asset.content_type or 'application/octet-stream', filename=asset.filename, content_disposition_type='attachment')
+
+def _materialize_asset(asset_id: str, session: SessionDep):
     asset=FileRepository(session).get_asset(asset_id)
     if asset is None: raise HTTPException(status_code=404,detail='asset content not available')
     if asset.path is None and asset.storage_mode == 'external':
@@ -79,7 +88,7 @@ def get_asset_content(asset_id:str,session:SessionDep):
             raise HTTPException(status_code=exc.response.status_code, detail='external file content is not available') from exc
         asset=FileRepository(session).set_asset_path(asset.id, path=str(target))
     if asset.path is None: raise HTTPException(status_code=404,detail='asset content not available')
-    return FileResponse(asset.path,media_type=asset.content_type or 'application/octet-stream',filename=asset.filename)
+    return asset
 @app.post('/api/v1/uploads/managed',status_code=status.HTTP_201_CREATED)
 async def upload_managed(session:SessionDep,owner_subject_id:str=Form(...),file:UploadFile=File(...)):
     UPLOAD_DIR.mkdir(parents=True,exist_ok=True)
