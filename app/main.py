@@ -1,4 +1,5 @@
 import os
+import mimetypes
 from pathlib import Path
 from uuid import uuid4
 from typing import Annotated
@@ -64,12 +65,12 @@ def get_preview_editor_config(preview_id:str,session:SessionDep):
 @app.get('/api/v1/assets/{asset_id}/content')
 def get_asset_content(asset_id:str,session:SessionDep):
     asset=_materialize_asset(asset_id, session)
-    return FileResponse(asset.path, media_type=asset.content_type or 'application/octet-stream', filename=asset.filename, content_disposition_type='inline')
+    return FileResponse(asset.path, media_type=_media_type(asset), filename=asset.filename, content_disposition_type='inline')
 
 @app.get('/api/v1/assets/{asset_id}/download')
 def download_asset_content(asset_id:str,session:SessionDep):
     asset=_materialize_asset(asset_id, session)
-    return FileResponse(asset.path, media_type=asset.content_type or 'application/octet-stream', filename=asset.filename, content_disposition_type='attachment')
+    return FileResponse(asset.path, media_type=_media_type(asset), filename=asset.filename, content_disposition_type='attachment')
 
 def _materialize_asset(asset_id: str, session: SessionDep):
     asset=FileRepository(session).get_asset(asset_id)
@@ -96,6 +97,13 @@ async def upload_managed(session:SessionDep,owner_subject_id:str=Form(...),file:
     target=UPLOAD_DIR/f"{uuid4().hex}-{safe_name}"
     target.write_bytes(await file.read())
     return _asset(FileRepository(session).create_managed_asset(owner_subject_id=owner_subject_id,filename=safe_name,content_type=file.content_type or 'application/octet-stream',path=str(target)))
+def _media_type(asset):
+    guessed = mimetypes.guess_type(asset.filename or '')[0]
+    content_type = asset.content_type or guessed or 'application/octet-stream'
+    if content_type in {'application/octet-stream', 'binary/octet-stream'} and guessed:
+        return guessed
+    return content_type
+
 def _asset(asset): return {'asset_id':asset.id,'storage_mode':asset.storage_mode,'owner_subject_id':asset.owner_subject_id,'filename':asset.filename,'content_type':asset.content_type,'provider':asset.provider,'external_file_id':asset.external_file_id,'revision':asset.revision,'path':asset.path}
 def _build_integrations_client() -> HttpIntegrationsClient:
     return HttpIntegrationsClient(base_url=os.getenv('INTEGRATIONS_BASE_URL', 'http://integrations:8310'))

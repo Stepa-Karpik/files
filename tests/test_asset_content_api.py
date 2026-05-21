@@ -65,3 +65,20 @@ def test_external_asset_content_is_materialized_on_demand(tmp_path, monkeypatch)
 
     assert response.status_code == 200
     assert response.content == b"external-bytes"
+
+
+def test_octet_stream_pdf_content_uses_filename_mime_type(tmp_path, monkeypatch):
+    client = make_client()
+    target = tmp_path / 'scan.pdf'
+    target.write_bytes(b'%PDF-1.4')
+    monkeypatch.setattr('app.main.UPLOAD_DIR', tmp_path)
+    uploaded = client.post(
+        '/api/v1/uploads/managed',
+        data={'owner_subject_id': 'usr_1'},
+        files={'file': ('scan.pdf', b'%PDF-1.4', 'application/octet-stream')},
+    ).json()
+
+    response = client.get(f"/api/v1/assets/{uploaded['asset_id']}/content")
+
+    assert response.status_code == 200
+    assert response.headers['content-type'].startswith('application/pdf')

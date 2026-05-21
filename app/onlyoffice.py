@@ -36,7 +36,7 @@ def build_editor_config(*, file_id: str, filename: str, download_url: str) -> di
 
 
 def _document_key(file_id: str) -> str:
-    return hashlib.sha256(file_id.encode()).hexdigest()[:32]
+    return ''.join(ch if ch.isalnum() or ch in '._=-' else '_' for ch in file_id)[:128]
 
 
 def _document_type(extension: str) -> str:

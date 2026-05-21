@@ -31,11 +31,21 @@ class FileRepository:
             close_after = _as_utc(lease.close_after)
             if close_after and close_after <= now:
                 asset = self.get_asset(lease.asset_id)
-                if asset and asset.path and asset.storage_mode == 'external':
+                if asset and asset.path:
                     path = Path(asset.path)
-                    if path.exists():
-                        path.unlink()
-                    asset.path = None
+                    try:
+                        is_temp = path.resolve().is_relative_to(Path('storage/temp').resolve())
+                    except Exception:
+                        is_temp = False
+                    try:
+                        is_managed_original = path.resolve().is_relative_to(Path('storage/managed').resolve())
+                    except Exception:
+                        is_managed_original = False
+                    if asset.storage_mode == 'external' or is_temp or not is_managed_original:
+                        if path.exists():
+                            path.unlink()
+                        if asset.storage_mode == 'external':
+                            asset.path = None
                 lease.status = 'deleted'
                 lease.deleted_at = now
                 deleted += 1
